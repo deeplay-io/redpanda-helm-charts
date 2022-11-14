@@ -162,7 +162,7 @@
         },
         "type": {
           "type": "string",
-          "pattern": "^NodePort$"
+          "pattern": "^(NodePort|Proxy)$"
         },
         "domain": {
           "type": "string",
@@ -611,7 +611,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^(NodePort|Proxy)$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -670,7 +670,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^(NodePort|Proxy)$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -738,7 +738,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^(NodePort|Proxy)$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -836,7 +836,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^(NodePort|Proxy)$"
                     },
                     "nodePort": {
                       "type": "integer"

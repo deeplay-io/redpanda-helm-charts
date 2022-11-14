@@ -32,6 +32,9 @@ metadata:
 {{- with .Values.commonLabels }}
   {{- toYaml . | nindent 4 }}
 {{- end }}
+{{- with .Values.statefulset.labels }}
+  {{- toYaml . | nindent 4 }}
+{{- end }}
 spec:
   selector:
     matchLabels:
@@ -50,6 +53,9 @@ spec:
         app.kubernetes.io/component: {{ template "redpanda.name" . }}
 {{- with .Values.commonLabels }}
         {- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.statefulset.labels }}
+        {{- toYaml . | nindent 8 }}
 {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
@@ -199,70 +205,70 @@ spec:
             - --reserve-memory={{ template "redpanda-reserve-memory" . }}
             - --default-log-level={{ .Values.logging.logLevel }}
             - --advertise-kafka-addr=internal://{{ $advertiseAddress }}:{{ .Values.listeners.kafka.port }},
-{{- range $name, $listener := .Values.listeners.kafka.external -}}
-  {{- $enabled := dig "enabled" $values.external.enabled $listener -}}
-  {{- $listenerNodePortEnabled := and $enabled (eq (dig "type" $values.external.type $listener) "NodePort") -}}
-  {{- $advertiseKafkaHost := $advertiseAddress -}}
-  {{- $advertiseKafkaPort := $listener.nodePort -}}
-  {{- if $listenerNodePortEnabled -}}
-    {{- $advertiseKafkaHost = printf "$(SERVICE_NAME).%s" $values.external.domain -}}
-  {{- end -}}
+            {{- range $name, $listener := .Values.listeners.kafka.external -}}
+              {{- $enabled := dig "enabled" $values.external.enabled $listener -}}
+              {{- $listenerNodePortEnabled := and $enabled (eq (dig "type" $values.external.type $listener) "NodePort") -}}
+              {{- $advertiseKafkaHost := $listener.advertised.host | default $advertiseAddress -}}
+              {{- $advertiseKafkaPort := $listener.advertised.port | default $listener.nodePort -}}
+              {{- if $listenerNodePortEnabled -}}
+                {{- $advertiseKafkaHost = printf "$(SERVICE_NAME).%s" $values.external.domain -}}
+              {{- end -}}
                 {{ $name }}://{{ $advertiseKafkaHost }}:{{ $advertiseKafkaPort }},
-{{- end }}
+            {{- end }}
             - --advertise-rpc-addr={{ $advertiseAddress }}:{{ .Values.listeners.rpc.port }}
             - --advertise-pandaproxy-addr=internal://{{ $advertiseAddress }}:{{ .Values.listeners.http.port }},
-{{- range $name, $listener := .Values.listeners.http.external -}}
-                {{ $name}}://{{ $advertiseAddress }}:{{ $listener.nodePort }},
-{{- end }}
+            {{- range $name, $listener := .Values.listeners.http.external -}}
+                {{ $name}}://{{ $listener.advertised.host | default $advertiseAddress }}:{{ $listener.advertised.port | default $listener.nodePort }},
+            {{- end }}
           ports:
-{{- range $name, $listener := .Values.listeners }}
+          {{- range $name, $listener := .Values.listeners }}
             - name: {{ lower $name }}
               containerPort: {{ $listener.port }}
-  {{- range $externalName, $external := $listener.external }}
-    {{- if $external.port }}
+            {{- range $externalName, $external := $listener.external }}
+              {{- if $external.port }}
             - name: {{ lower $name | trunc 6 }}-{{ lower $externalName | trunc 8}}
               containerPort: {{ $external.port }}
-    {{- end }}
-  {{- end }}
-{{- end }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: datadir
               mountPath: /var/lib/redpanda/data
             - name: config
               mountPath: /etc/redpanda
-{{- if (include "tls-enabled" . | fromJson).bool }}
-  {{- range $name, $cert := .Values.tls.certs }}
+          {{- if (include "tls-enabled" . | fromJson).bool }}
+            {{- range $name, $cert := .Values.tls.certs }}
             - name: redpanda-{{ $name }}-cert
               mountPath: {{ printf "/etc/tls/certs/%s" $name }}
-  {{- end }}
-{{- end }}
+            {{- end }}
+          {{- end }}
           resources:
-{{- if hasKey .Values.resources.memory "min" }}
+            {{- if hasKey .Values.resources.memory "min" }}
             requests:
               cpu: {{ .Values.resources.cpu.cores }}
               memory: {{ .Values.resources.memory.container.min }}
-{{- end }}
+            {{- end }}
             limits:
               cpu: {{ .Values.resources.cpu.cores }}
               memory: {{ .Values.resources.memory.container.max }}
       volumes:
         - name: datadir
-{{- if .Values.storage.persistentVolume.enabled }}
+          {{- if .Values.storage.persistentVolume.enabled }}
           persistentVolumeClaim:
             claimName: datadir
-{{- else if .Values.storage.hostPath }}
+          {{- else if .Values.storage.hostPath }}
           hostPath:
             path: {{ .Values.storage.hostPath | quote }}
-{{- else }}
+          {{- else }}
           emptyDir: {}
-{{- end }}
+          {{- end }}
         - name: {{ template "redpanda.fullname" . }}
           configMap:
             name: {{ template "redpanda.fullname" . }}
         - name: config
           emptyDir: {}
-{{- if (include "tls-enabled" . | fromJson).bool }}
-  {{- range $name, $cert := .Values.tls.certs }}
+        {{- if (include "tls-enabled" . | fromJson).bool }}
+        {{- range $name, $cert := .Values.tls.certs }}
         - name: redpanda-{{ $name }}-cert
           secret:
             defaultMode: 420
@@ -271,22 +277,22 @@ spec:
               path: tls.key
             - key: tls.crt
               path: tls.crt
-    {{- if $cert.caEnabled }}
+          {{- if $cert.caEnabled }}
             - key: ca.crt
               path: ca.crt
-    {{- end }}
+          {{- end }}
             secretName: {{ template "redpanda.fullname" $ }}-{{ $name }}-cert
-  {{- end }}
-{{- end -}}
-{{- if or .Values.statefulset.nodeAffinity .Values.statefulset.podAffinity .Values.statefulset.podAntiAffinity }}
+        {{- end }}
+        {{- end -}}
+      {{- if or .Values.statefulset.nodeAffinity .Values.statefulset.podAffinity .Values.statefulset.podAntiAffinity }}
       affinity:
-  {{- with .Values.statefulset.nodeAffinity }}
+      {{- with .Values.statefulset.nodeAffinity }}
         nodeAffinity: {{- toYaml . | nindent 10 }}
-  {{- end }}
-  {{- with .Values.statefulset.podAffinity }}
+      {{- end }}
+      {{- with .Values.statefulset.podAffinity }}
         podAffinity: {{- toYaml . | nindent 10 }}
-  {{- end }}
-  {{- if .Values.statefulset.podAntiAffinity }}
+      {{- end }}
+      {{- if .Values.statefulset.podAntiAffinity }}
         podAntiAffinity:
     {{- if .Values.statefulset.podAntiAffinity.type }}
       {{- if eq .Values.statefulset.podAntiAffinity.type "hard" }}

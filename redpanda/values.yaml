@@ -257,6 +257,7 @@ statefulset:
     maxUnavailable: 1
   # Additional annotations to apply to the Pods of this StatefulSet.
   annotations: {}
+  labels: {}
   # Adjust the period for your probes to meet your needs (see https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes)
   startupProbe:
     initialDelaySeconds: 1
@@ -389,6 +390,9 @@ listeners:
         # External port
         # `nodePort` defines the TCP port to listen on for NodePort types.
         nodePort: 31644
+        advertised: 
+          port: 
+          host:
     # Optional TLS section (required if global TLS is enabled)
     tls:
       # Optional flag to override the global TLS enabled flag
@@ -418,6 +422,9 @@ listeners:
         # External port
         # This listener port will be used on each kubernetes node
         nodePort: 31092
+        advertised: 
+          port: 
+          host:
   # HTTP API listeners (aka PandaProxy)
   # PandaProxy is a kafka client that connects to an endpoint from listeners.kafka.endpoints
   http:
@@ -438,6 +445,9 @@ listeners:
         # External port
         # This listener port will be used for the external port if NodePort is selected
         nodePort: 30082
+        advertised: 
+          port: 
+          host:
   # RPC listener
   # The RPC listener cannot be disabled
   rpc:
@@ -467,6 +477,7 @@ listeners:
         # External port
         # This listener port will be used for the external port if this is not included
         nodePort: 30081
+        advertisedHost: 
 
 # Expert Config
 
