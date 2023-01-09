@@ -51,6 +51,9 @@ spec:
 {{- with .Values.commonLabels }}
         {{- toYaml . | nindent 8 }}
 {{- end }}
+{{- with .Values.statefulset.labels }}
+        {{- toYaml . | nindent 8 }}
+{{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 {{- with $.Values.statefulset.annotations }}
@@ -113,11 +116,12 @@ spec:
               {{- range $name, $listener := .Values.listeners.kafka.external }}
                 {{- $enabled := dig "enabled" $values.external.enabled $listener }}
                 {{- $listenerNodePortEnabled := and $enabled (eq (dig "type" $values.external.type $listener) "NodePort") }}
+                {{- $listenerGatewayEnabled := and $enabled (eq (dig "type" $values.external.type $listener) "Gateway") }}
                 {{- $advertiseKafkaHost := $advertiseAddress }}
                 {{- $advertiseKafkaPort := $listener.nodePort }}
                 {{- if $listenerNodePortEnabled }}
                   {{- if $values.external.addresses }}
-              NODE_INDEX=`expr $NODE_ID + 1`
+              NODE_INDEX=`expr $POD_ORDINAL + 1`
               NODE_ADDRESS=`echo $EXTERNAL_ADDRESSES | cut -d ' ' -f $NODE_INDEX`
                     {{- if eq $values.external.addressType "ip" }}
               rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].address $NODE_ADDRESS
@@ -129,8 +133,17 @@ spec:
               rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].address {{ $advertiseKafkaHost }}
                   {{- end }}
                 {{- end }}
+                {{- if $listenerGatewayEnabled }}
+              NODE_INDEX=`expr $POD_ORDINAL + 1`
+              NODE_ADDRESS=`echo $EXTERNAL_ADDRESSES | cut -d ' ' -f $NODE_INDEX`
+              rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].address $NODE_ADDRESS.{{ $values.external.domain }}
+                {{- end }}
               rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].name {{ $name }}
+                {{- if $listenerGatewayEnabled }}
+              rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].port 443 # gateway always use 443 port
+                {{- else }}
               rpk redpanda --config "$CONFIG" config set redpanda.advertised_kafka_api[{{ $listenerIndex }}].port {{ $advertiseKafkaPort }}
+                {{- end }}
                 {{- $listenerIndex = add $listenerIndex 1 }}
               {{- end }}
 

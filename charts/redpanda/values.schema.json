@@ -195,7 +195,7 @@
         },
         "type": {
           "type": "string",
-          "pattern": "^NodePort$"
+          "pattern": "^NodePort|Gateway$"
         },
         "domain": {
           "type": "string",
@@ -664,7 +664,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^NodePort|Gateway$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -723,7 +723,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^NodePort|Gateway$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -791,7 +791,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^NodePort|Gateway$"
                     },
                     "nodePort": {
                       "type": "integer"
@@ -889,7 +889,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "pattern": "^NodePort$"
+                      "pattern": "^NodePort|Gateway$"
                     },
                     "nodePort": {
                       "type": "integer"
